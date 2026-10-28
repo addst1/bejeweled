@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Jewel Swap</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f30">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jewel Swap">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+  html,body{margin:0;width:100%;height:100%;background:#050818;overflow:hidden;overscroll-behavior:none;
+    touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent}
+  /* 화면 전체를 쓰되, 카메라 컷아웃/제스처 바 영역(safe-area)은 비워 둔다 */
+  #stage{position:fixed;inset:0;box-sizing:border-box;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  #c{display:block;width:100%;height:100%;touch-action:none;background:#0a0f30}
+  /* 데스크톱에서는 세로로 긴 갤럭시 크기의 미리보기 창으로 보여 준다 */
+  @media (hover:hover) and (pointer:fine) and (min-width:700px) and (min-height:520px){
+    body{display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#232a52,#050818)}
+    #stage{position:relative;inset:auto;height:calc(100vh - 56px);height:calc(100dvh - 56px);
+      width:min(calc((100vh - 56px) * .46),calc(100vw - 32px));width:min(calc((100dvh - 56px) * .46),calc(100vw - 32px));
+      padding:0;border-radius:30px;overflow:hidden;box-shadow:0 0 0 6px #0b0b10,0 0 0 8px #2a2d3a,0 20px 60px rgba(0,0,0,.7)}
+  }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c"></canvas></div>
+<script src="game.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+</body>
+</html>
