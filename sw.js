@@ -1,4 +1,4 @@
-const VERSION = 'jewel-reboot-v8';
+const VERSION = 'jewel-reboot-v10';
 const ASSETS = [
   './',
   './index.html',
