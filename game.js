@@ -4,7 +4,7 @@
  */
 (() => {
   const N = 8, NT = 6, HYPER = 6;
-  const VERSION = '2.3.0', BUILD = '2026-10-29';   // 배포 시 sw.js 의 VERSION(캐시 이름)도 같이 올리세요
+  const VERSION = '2.5.0', BUILD = '2026-10-29';   // 배포 시 sw.js 의 VERSION(캐시 이름)도 같이 올리세요
   const IDLE_HINT_SEC = 9;
 
   const canvas = document.getElementById('c');
@@ -43,17 +43,17 @@
   const MODES = [
     { id: 'classic', name: 'CLASSIC', hue: 245, desc: '수가 없으면 종료. 레벨을 올려라!', lvl: 1, spec: 1, dead: 'over', mult: 1 },
     { id: 'zen', name: 'ZEN', hue: 175, desc: '끝없는 평온. 막히면 자동 셔플', lvl: 1, spec: 1, dead: 'shuffle', mult: 0 },
-    { id: 'lightning', name: 'LIGHTNING', hue: 205, desc: '60초 승부! 시계 보석으로 시간 연장', timer: 'lightning', spec: 1, dead: 'shuffle', mult: 0 },
+    { id: 'lightning', name: 'SPRINT', hue: 205, desc: '60초 승부! 시계 보석으로 시간 연장', timer: 'lightning', spec: 1, dead: 'shuffle', mult: 0 },
     { id: 'action', name: 'ACTION', hue: 345, desc: '매치로 타이머를 채워 버텨라', timer: 'action', lvl: 1, spec: 1, dead: 'shuffle', mult: 1, noReset: 1 },
     { id: 'quest', name: 'QUEST', hue: 140, desc: '미션을 깨고 유물을 모아라 (목숨 3개)', quest: 1, spec: 1, dead: 'shuffle', mult: 0 },
-    { id: 'twist', name: 'TWIST', hue: 300, desc: '2×2 회전! 폭탄이 터지기 전에 해체', twist: 1, bombs: 1, lvl: 1, spec: 1, dead: 'none', mult: 1 },
+    { id: 'twist', name: 'SWIRL', hue: 300, desc: '2×2 회전! 폭탄이 터지기 전에 해체', twist: 1, bombs: 1, lvl: 1, spec: 1, dead: 'none', mult: 1 },
     { id: 'endless', name: 'ENDLESS', hue: 225, desc: '종료 없음, 점수 배율 없음', lvl: 1, spec: 1, dead: 'shuffle', mult: 0, secret: 1,
       unlock: 'ZEN 3,000점', cond: () => bestOf('zen').score >= 3000 },
-    { id: 'twilight', name: 'TWILIGHT', hue: 275, desc: '매 수마다 중력 방향이 바뀐다', gravity: 1, lvl: 1, spec: 1, dead: 'over', mult: 1, secret: 1,
+    { id: 'twilight', name: 'DRIFT', hue: 275, desc: '매 수마다 중력 방향이 바뀐다', gravity: 1, lvl: 1, spec: 1, dead: 'over', mult: 1, secret: 1,
       unlock: 'CLASSIC 레벨 5', cond: () => bestOf('classic').level >= 5 },
     { id: 'hyper', name: 'HYPER', hue: 355, desc: '더 빠르고 더 치열한 ACTION', timer: 'hyper', lvl: 1, spec: 1, dead: 'shuffle', mult: 1, noReset: 1, secret: 1,
       unlock: 'ACTION 레벨 4', cond: () => bestOf('action').level >= 4 },
-    { id: 'bfly', name: 'BUTTERFLIES', hue: 120, desc: '거미가 닿기 전에 나비를 매치하라', bfly: 1, lvl: 1, spec: 1, dead: 'shuffle', mult: 1, secret: 1,
+    { id: 'bfly', name: 'FIREFLIES', hue: 120, desc: '거미가 닿기 전에 반딧불이를 매치하라', bfly: 1, lvl: 1, spec: 1, dead: 'shuffle', mult: 1, secret: 1,
       unlock: 'QUEST 미션 5 클리어', cond: () => bestOf('quest').level >= 5 },
     { id: 'original', name: 'ORIGINAL', hue: 235, desc: '특수 보석 없는 순수 클래식', lvl: 1, spec: 0, dead: 'over', mult: 1, secret: 1,
       unlock: '배지 5개 획득', cond: () => Object.keys(save.badges).length >= 5 }
@@ -62,20 +62,20 @@
   const isUnlocked = m => !m.secret || !!save.unlocked[m.id];
 
   const BADGES = [
-    { id: 'flame', name: 'Fire Starter', desc: 'Flame 보석 만들기' },
-    { id: 'star', name: 'Star Maker', desc: 'Star 보석 만들기' },
-    { id: 'hyper', name: 'Cube Master', desc: 'Hypercube 만들기' },
-    { id: 'nova', name: 'Supernova!', desc: '6개 이상 일렬 매치' },
+    { id: 'flame', name: 'Ember Maker', desc: 'Ember 보석 만들기' },
+    { id: 'star', name: 'Beacon Maker', desc: 'Beacon 보석 만들기' },
+    { id: 'hyper', name: 'Prism Master', desc: 'Prism 보석 만들기' },
+    { id: 'nova', name: 'Aurora!', desc: '6개 이상 일렬 매치' },
     { id: 'combo5', name: 'Chain Reaction', desc: '5연쇄 달성' },
     { id: 'combo8', name: 'Cascade King', desc: '8연쇄 달성' },
     { id: 'big', name: 'High Roller', desc: '한 판에 5,000점' },
-    { id: 'lightning', name: 'Lightning Bolt', desc: 'LIGHTNING 1,500점' },
+    { id: 'lightning', name: 'Sprinter', desc: 'SPRINT 1,500점' },
     { id: 'quest5', name: 'Adventurer', desc: 'QUEST 미션 5 클리어' },
     { id: 'quest10', name: 'Relic Hunter', desc: 'QUEST 미션 10 클리어' },
     { id: 'zen', name: 'Zen Master', desc: 'ZEN 5분 플레이' },
-    { id: 'twist', name: 'Twister', desc: 'TWIST 1,500점' },
-    { id: 'butterfly', name: 'Butterfly Friend', desc: '나비 20마리 구하기 (누적)' },
-    { id: 'bigbang', name: 'Big Bang', desc: 'Hypercube 두 개를 맞바꾸기' },
+    { id: 'twist', name: 'Swirler', desc: 'SWIRL 1,500점' },
+    { id: 'butterfly', name: 'Firefly Friend', desc: '반딧불이 20마리 구하기 (누적)' },
+    { id: 'bigbang', name: 'Big Bang', desc: 'Prism 두 개를 맞바꾸기' },
     { id: 'level8', name: 'Veteran', desc: '레벨 8 도달' },
     { id: 'all', name: 'Completionist', desc: '모든 모드 해금' }
   ];
@@ -885,7 +885,7 @@
     return { runs, cells };
   }
 
-  // 매치 모양 → 특수 보석 계획 (4개=Flame, L·T·十=Star, 5개=Hypercube, 6개+=Supernova)
+  // 매치 모양 → 특수 보석 계획 (4개=Ember, L·T·十=Beacon, 5개=Prism, 6개+=Aurora)
   function planCreations(m, pref) {
     const cre = [];
     const pick = cells => {
@@ -1104,7 +1104,7 @@
       } else if (forced.kind === 'bomb') {
         sfx('flame'); embers(x0, y0, 26); addRing(x0, y0, '#ff9a2a', 8, 4.2, 1.3); showPraise('BOOM!', 44);
       } else if (forced.kind === 'burst') { sfx('hyper'); showPraise('COLOR BURST!', 46); }
-      else { sfx('hyper'); showPraise('HYPERCUBE!', 52); }
+      else { sfx('hyper'); showPraise('PRISM!', 52); }
     }
     for (const t of trig) {
       const x = cx(t.c) + CS / 2, y = cy(t.r) + CS / 2;
@@ -1119,7 +1119,7 @@
         addFlash(x, y, CS * 6.5, '255,240,200', 36);
         for (let k = 0; k < 3; k++) addRing(x, y, k % 2 ? '#fff6c0' : '#ffb84a', 10 + k * 10, 3 + k, 1.5);
         embers(x, y, 34); sparksAt(x, y, '#ffffff', 24, 8);
-        sfx('nova'); flashT = Math.max(flashT, .75); doShake(13, 560); doPunch(1.15); showPraise('SUPERNOVA!', 60); hold = Math.max(hold, 280);
+        sfx('nova'); flashT = Math.max(flashT, .75); doShake(13, 560); doPunch(1.15); showPraise('AURORA!', 60); hold = Math.max(hold, 280);
       } else if (t.sp === 'hyper') {
         for (let k = 0; k < 7; k++) addBolt(x, y, cx(rnd(N)) + CS / 2, cy(rnd(N)) + CS / 2, '170,130,255', 22, .6);
         addFlash(x, y, CS * 3, '210,170,255', 26); sfx('hyper'); doShake(6); doPunch(.7); hold = Math.max(hold, 200);
@@ -1208,7 +1208,7 @@
           const x = g.x + CS / 2, y = g.y + CS / 2;
           addRing(x, y, '#ffffff', 6, 3.4, 1.2); addFlash(x, y, CS * 2.2, c.sp === 'flame' ? '255,170,60' : '255,255,255', 24); sparksAt(x, y, '#ffffff', 14, 5);
           save.stats[c.sp]++; award(c.sp);
-          showPraise(c.sp === 'flame' ? 'FLAME GEM!' : c.sp === 'star' ? 'STAR GEM!' : c.sp === 'hyper' ? 'HYPERCUBE!' : 'SUPERNOVA GEM!', 44);
+          showPraise(c.sp === 'flame' ? 'EMBER GEM!' : c.sp === 'star' ? 'BEACON GEM!' : c.sp === 'hyper' ? 'PRISM GEM!' : 'AURORA GEM!', 44);
         }
         sfx('forge');
         await tween(240, p => { for (const c of cre) { const g = grid[(c.idx / N) | 0][c.idx % N]; if (g) g.s = .2 + .8 * (1 - Math.pow(1 - p, 3)) + Math.sin(p * Math.PI) * .35; } });
@@ -1314,7 +1314,7 @@
 
 
   // ───────────────────────── 부스터 (마법봉 / 폭탄 / 컬러 버스트) ─────────────────────────
-  const BOOST = { wand: { cost: 150, label: 'Wand', tip: '보석을 탭 → Flame/Star 로 변신' }, bomb: { cost: 200, label: 'Bomb', tip: '탭한 곳 3×3 폭파' }, burst: { cost: 120, label: 'Burst', tip: '탭한 색을 모두 제거' } };
+  const BOOST = { wand: { cost: 150, label: 'Wand', tip: '보석을 탭 → Ember/Beacon 으로 변신' }, bomb: { cost: 200, label: 'Bomb', tip: '탭한 곳 3×3 폭파' }, burst: { cost: 120, label: 'Burst', tip: '탭한 색을 모두 제거' } };
   function useBooster(k) {
     if (!canAct()) return;
     if (armed === k) { armed = null; sfx('ui'); return; }
@@ -1339,7 +1339,7 @@
         sfx('forge'); addRing(x, y, '#ffffff', 6, 3.4, 1.2); addFlash(x, y, CS * 2.4, '255,230,255', 26); sparksAt(x, y, '#ffffff', 18, 6);
         for (let i = 0; i < 6; i++) addBolt(x, y, x + (Math.random() - .5) * CS * 2.4, y + (Math.random() - .5) * CS * 2.4, '255,230,160', 10, .5);
         g0.sp = Math.random() < .5 ? 'flame' : 'star'; g0.noTrig = false; g0.s = .2;
-        showPraise(g0.sp === 'flame' ? 'FLAME GEM!' : 'STAR GEM!', 40);
+        showPraise(g0.sp === 'flame' ? 'EMBER GEM!' : 'BEACON GEM!', 40);
         await tween(260, p => { g0.s = .2 + .8 * (1 - Math.pow(1 - p, 3)) + Math.sin(p * Math.PI) * .35; });
         g0.s = 1; save.stats[g0.sp]++; award(g0.sp);
       } else {
@@ -1365,7 +1365,7 @@
     const btns = [];
     if (inGame) btns.push({ label: 'Resume', fn: () => { dlg = null; }, hue: HUE_GREEN });
     btns.push({ label: 'Sound: ' + (sound ? 'On' : 'Off'), fn: () => { toggleSound(); dlg = settingsDlg(title, inGame); }, hue: HUE_BLUE });
-    btns.push({ label: 'CRT: ' + ['Off', 'Soft', 'Strong'][save.crt | 0], fn: () => { setCrt(((save.crt | 0) + 1) % 3); dlg = settingsDlg(title, inGame); }, hue: HUE_BLUE });
+    btns.push({ label: 'Scanlines: ' + (save.crt ? 'On' : 'Off'), fn: () => { setCrt(save.crt ? 0 : 1); dlg = settingsDlg(title, inGame); }, hue: HUE_BLUE });
     if (inGame) btns.push({ label: 'Quit', fn: () => { toMenu(); }, hue: HUE_RED }); else btns.push({ label: 'Close', fn: () => { dlg = null; }, hue: HUE_GREEN });
     return { title, lines: [], btns, stack: true };
   }
@@ -1481,6 +1481,7 @@
   async function gameOver(title, reason) {
     if (!G || G.over) return;
     G.over = true; sel = null; hintMove = null;
+    clearRun();
     noteBest(); checkUnlocks(); persist();
     sfx(title === 'BOOM!' ? 'boom' : 'over');
     await wait(500);
@@ -1508,7 +1509,7 @@
     }
     if (cfg.bfly) {
       const ate = await butterflyStep();
-      if (ate) { sfx('boom'); doShake(10); await gameOver('GAME OVER', '나비가 거미에게 잡혔습니다'); return; }
+      if (ate) { sfx('boom'); doShake(10); await gameOver('GAME OVER', '반딧불이가 거미에게 잡혔습니다'); return; }
       if (G.moves % 6 === 0) spawnButterfly();
       if (findMatches().cells.size) await resolve({ pref: new Set() });
     }
@@ -1548,7 +1549,34 @@
   function toMenu() {
     clearInteraction(); clearFx();
     if (G) { noteBest(); persist(); }
+    clearRun();
     G = null; screen = 'menu'; grid = [];
+  }
+  // ── 이어하기: 진행 중인 판을 따로 저장해 두었다가 앱이 다시 열릴 때 복원한다 ──
+  const RUN_KEY = 'jewel-reboot-run-v1';
+  function clearRun() { try { localStorage.removeItem(RUN_KEY); } catch (e) {} }
+  function saveRun() {
+    if (!G || G.busy || !G.started || screen !== 'game' || grid.length !== N) return;
+    if (G.over) { clearRun(); return; }
+    try {
+      const g = Object.assign({}, G); delete g.cfg;
+      const cells = grid.map(row => row.map(o => o ? { t: o.t, sp: o.sp, bomb: o.bomb, bf: o.bf, time: o.time, noTrig: o.noTrig } : null));
+      localStorage.setItem(RUN_KEY, JSON.stringify({ v: 1, id: G.cfg.id, G: g, cells }));
+    } catch (e) {}
+  }
+  function restoreRun() {
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(RUN_KEY) || 'null'); } catch (e) {}
+    const cfg = s && s.v === 1 && modeById(s.id);
+    if (!cfg || !Array.isArray(s.cells) || s.cells.length !== N || !s.cells.every(r => Array.isArray(r) && r.length === N)) { clearRun(); return false; }
+    clearInteraction(); clearFx();
+    G = Object.assign({}, s.G, { cfg, busy: false, started: true, over: false, timeUp: false });
+    grid = s.cells.map((row, r) => row.map((o, c) => { if (!o) return null; const g = mkGem(o.t, r, c); g.sp = o.sp || null; g.bomb = o.bomb | 0; g.bf = o.bf | 0; g.time = o.time | 0; g.noTrig = !!o.noTrig; return g; }));
+    if (grid.some(row => row.some(o => !o))) { G = null; grid = []; clearRun(); return false; }
+    screen = 'game';
+    ensureBg();
+    dlg = settingsDlg('PAUSED', true);
+    return true;
   }
   function askQuit() {
     if (!G || G.busy) return;
@@ -1680,21 +1708,18 @@
     ctx.lineWidth = Math.max(2, r * .22); ctx.strokeStyle = 'rgba(255,' + (80 + pulse * 100 | 0) + ',60,1)'; ctx.stroke();
     txt(String(n), x, y + 1, { size: r * 1.3, align: 'center', shadow: false, color: n <= 3 ? '#ff9a9a' : '#ffffff' });
   }
-  function drawButterfly(x, y, sz, now, ph, col) {
-    const flap = .35 + .65 * Math.abs(Math.sin(now / 110 + ph)), s = sz * .4;
+  function drawFirefly(x, y, sz, now, ph) {
+    const flap = .3 + .7 * Math.abs(Math.sin(now / 70 + ph)), s = sz * .4, pulse = .6 + .4 * Math.sin(now / 260 + ph);
+    aura(x, y + s * .35, s * 1.8, '190,255,110', .5 * pulse + .2);
     ctx.save(); ctx.translate(x, y);
-    for (const side of [-1, 1]) {
-      ctx.save(); ctx.scale(side * flap, 1);
-      ctx.beginPath(); ctx.ellipse(s * .55, -s * .3, s * .6, s * .8, -.4, 0, Math.PI * 2);
-      ctx.fillStyle = col; ctx.fill(); ctx.lineWidth = Math.max(1.5, s * .1); ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(s * .45, s * .5, s * .38, s * .45, .5, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill(); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(s * .6, -s * .4, s * .16, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
-    }
-    ctx.fillStyle = '#1a1020'; rr(ctx, -s * .1, -s * .8, s * .2, s * 1.6, s * .1); ctx.fill();
+    ctx.fillStyle = 'rgba(235,250,255,.8)'; ctx.strokeStyle = 'rgba(40,60,50,.7)'; ctx.lineWidth = Math.max(1, s * .07);
+    for (const sd of [-1, 1]) { ctx.save(); ctx.scale(sd * flap, 1); ctx.beginPath(); ctx.ellipse(s * .55, -s * .42, s * .5, s * .8, -.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore(); }
+    ctx.fillStyle = '#26301f'; ctx.beginPath(); ctx.ellipse(0, -s * .3, s * .22, s * .38, 0, 0, Math.PI * 2); ctx.fill();
+    const g = ctx.createRadialGradient(0, s * .5, 0, 0, s * .5, s * .6); g.addColorStop(0, '#f6ffc0'); g.addColorStop(.55, '#b8f060'); g.addColorStop(1, '#5aa020');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, s * .45, s * .34, s * .52, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#26301f'; ctx.lineWidth = Math.max(1.5, s * .08); ctx.beginPath(); ctx.moveTo(-s * .1, -s * .62); ctx.quadraticCurveTo(-s * .3, -s * .9, -s * .5, -s * .85); ctx.moveTo(s * .1, -s * .62); ctx.quadraticCurveTo(s * .3, -s * .9, s * .5, -s * .85); ctx.stroke();
     ctx.restore();
   }
-
   function drawGem(o, hb, extra, now) {
     const x = o.x + CS / 2, y = o.y + CS / 2, sz = GS * o.s * extra;
     if (sz < 1) return;
@@ -1711,7 +1736,7 @@
     else if (o.sp === 'nova') drawNovaIcon(x, y, sz, now, o.ph);
     if (o.time) drawClockIcon(x, y, sz, now);
     if (o.bomb > 0) drawBombIcon(x, y, sz, now, o.bomb);
-    if (o.bf) drawButterfly(x, y, sz, now, o.ph, o.t < HYPER ? PAL[o.t].l : '#fff');
+    if (o.bf) drawFirefly(x, y, sz, now, o.ph);
   }
 
   // ───────────────────────── 렌더링: 게임 화면 ─────────────────────────
@@ -2178,7 +2203,7 @@
     subHeader('RECORDS', now);
     const a = SL.area, st = save.stats;
     const statLines = ['플레이 ' + st.plays + '회  ·  보석 ' + fmt(st.gems) + '개 제거  ·  최대 연쇄 ' + st.maxCombo,
-      'Flame ' + st.flame + '  ·  Star ' + st.star + '  ·  Hypercube ' + st.hyper + '  ·  Supernova ' + st.nova];
+      'Ember ' + st.flame + '  ·  Beacon ' + st.star + '  ·  Prism ' + st.hyper + '  ·  Aurora ' + st.nova];
     const sh = Math.min(34, a.h * .12) , rowsH = a.h - sh * 2 - SL.gap;
     const rh = Math.min(Math.floor(rowsH / (MODES.length + 1)), 44);
     const fs = Math.max(10, Math.min(rh * .5, 18));
@@ -2200,8 +2225,8 @@
   let helpPage = 0;
   const HELP = [
     [['기본 규칙', '인접한 두 보석을 탭-탭 또는 드래그로 바꿔 같은 색 3개 이상을 이으세요. 연쇄가 이어질수록 점수 배율이 올라갑니다. 힌트는 한동안 가만히 있으면 자동으로 나옵니다.'],
-     ['특수 보석', '4개 일렬 → Flame: 주변 3×3 폭발\nL·T·十 모양 → Star: 가로·세로 줄 제거\n5개 일렬 → Hypercube: 바꾼 색을 전부 제거 (두 개를 맞바꾸면 판 전체)\n6개 이상 → Supernova: 3줄 십자 폭발'],
-     ['특수 아이템', '시계 보석: 매치하면 시간 +5초 (LIGHTNING)\n폭탄 보석: 숫자가 0이 되기 전에 매치해 해체 (TWIST)\n나비: 맨 위(거미)에 닿기 전에 매치해서 구출 (BUTTERFLIES)']],
+     ['특수 보석', '4개 일렬 → Ember: 주변 3×3 폭발\nL·T·十 모양 → Beacon: 가로·세로 줄 제거\n5개 일렬 → Prism: 바꾼 색을 전부 제거 (두 개를 맞바꾸면 판 전체)\n6개 이상 → Aurora: 3줄 십자 폭발'],
+     ['특수 아이템', '시계 보석: 매치하면 시간 +5초 (SPRINT)\n폭탄 보석: 숫자가 0이 되기 전에 매치해 해체 (SWIRL)\n반딧불이: 맨 위(거미)에 닿기 전에 매치해서 구출 (FIREFLIES)']],
     MODES.map(m => [m.name, m.desc + (m.secret ? '   [해금: ' + m.unlock + ']' : '')])
   ];
   function drawHelp(now) {
@@ -2427,8 +2452,7 @@
       drawFlameIcon(0, s * .02, s * 1.8, now, 0);
       gimg(1, 0, s * .08, s * .54, 0);
     } else if (id === 'bfly') {
-      drawButterfly(0, 0, s * 1.45, now, 0, '#c98bff');
-      gimg(2, 0, -s * .02, s * .3, 0);
+      drawFirefly(0, -s * .1, s * 1.6, now, 0);
     } else {
       navIcon('trophy', 0, 0, s * 1.05, '#ffd23c');
       gimg(5, 0, -s * .16, s * .34, 0);
@@ -2670,7 +2694,7 @@
   function update(dt, now) {
     updateFx(dt, now);
     if (screen === 'game') updateGame(dt, now);
-    if (dirty && now - lastSave > 2500) { lastSave = now; persist(); }
+    if (now - lastSave > 2500) { lastSave = now; if (dirty) persist(); saveRun(); }
   }
   // 프레임이 떨어지면 이펙트 품질을 자동으로 낮춘다
   function frame(now) {
@@ -2680,8 +2704,8 @@
     try { update(dt, now); draw(now); } catch (err) { if (window.console) console.error(err); }
     requestAnimationFrame(frame);
   }
-  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (G) noteBest(); persist(); } else last = performance.now(); });
-  window.addEventListener('pagehide', () => { if (G) noteBest(); persist(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (G) noteBest(); persist(); saveRun(); } else last = performance.now(); });
+  window.addEventListener('pagehide', () => { if (G) noteBest(); persist(); saveRun(); });
 
   // 리사이즈 / 회전 / 폴더블 접힘 대응
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => applyLayout()).observe(canvas);
@@ -2694,7 +2718,7 @@
   // ───────────────────────── 테스트용 API ─────────────────────────
   window.__jewel = {
     VERSION,
-    findMove, trySwap, twistRotate, newGame, useBooster, applyBooster, openPause, get armed() { return armed; }, relayout: applyLayout, toMenu,
+    findMove, trySwap, twistRotate, newGame, useBooster, applyBooster, openPause, saveRun, restoreRun, get armed() { return armed; }, relayout: applyLayout, toMenu,
     get G() { return G; }, get screen() { return screen; }, get dlg() { return dlg; },
     get busy() { return !!(G && G.busy); }, get score() { return G ? G.score : 0; },
     get level() { return G ? G.level : 0; }, get over() { return !!(G && G.over); },
@@ -2716,5 +2740,6 @@
   };
 
   applyLayout();
+  restoreRun();
   requestAnimationFrame(frame);
 })();
