@@ -1,4 +1,4 @@
-const VERSION = 'jewel-swap-v3';
+const VERSION = 'jewel-swap-v4';
 const ASSETS = [
   './',
   './index.html',

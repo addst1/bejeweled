@@ -28,15 +28,15 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   // ───────────────────────── 보석 스프라이트 ─────────────────────────
-  const PAL = [
-    { d: '#7f8fb5', b: '#dfe8f8', l: '#ffffff' },
-    { d: '#7a0010', b: '#e3203a', l: '#ff8a98' },
-    { d: '#005a2a', b: '#1fb85a', l: '#8af0b0' },
-    { d: '#8a6200', b: '#f2c312', l: '#fff2a0' },
-    { d: '#0a2a8a', b: '#2a6af0', l: '#9cc4ff' },
-    { d: '#4a0e78', b: '#a43cd8', l: '#e6a8ff' },
-    { d: '#8a3200', b: '#f2801a', l: '#ffcf9a' }
-  ];
+  // 아케이드 블록 퍼즐과 같은 비비드 7색 (시안/레드/그린/옐로/블루/핑크/오렌지)
+  const VERSION = '1.4.0', BUILD = '2026-10-29';   // 배포할 때 sw.js 의 VERSION(캐시 이름)도 같이 올리세요
+  const BASE = ['#19d3f3', '#ff3b30', '#30d158', '#ffd60a', '#3d5afe', '#ff2d95', '#ff9f0a'];
+  const mixHex = (a, b, t) => {
+    const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
+    const f = s => Math.round(((A >> s) & 255) * (1 - t) + ((B >> s) & 255) * t);
+    return '#' + [16, 8, 0].map(s => f(s).toString(16).padStart(2, '0')).join('');
+  };
+  const PAL = BASE.map(b => ({ b, d: mixHex(b, '#000000', .55), l: mixHex(b, '#ffffff', .62) }));
   const ring = (n, fx, fy) => Array.from({ length: n }, (_, i) => {
     const a = i / n * Math.PI * 2 - Math.PI / 2;
     return [Math.cos(a) * fx, Math.sin(a) * fy];
@@ -187,6 +187,7 @@
   // ───────────────────────── 레이아웃 ─────────────────────────
   function computeLayout() {
     const land = W > H * 1.15;
+    const verH = 16;   // 맨 아래 버전 표시 줄
     const m = Math.round(clamp(W * .035, 8, 18));
     const gap = Math.round(clamp(Math.min(W, H) * .02, 6, 14));
     L = { btns: [], land, title: null };
@@ -196,11 +197,11 @@
       const progH = Math.round(clamp(H * .026, 14, 24));
       const btnH = Math.round(clamp(H * .065, 40, 58));
       const fixed = panelH + progH + btnH + gap * 3;
-      const avail = H - 2 * m - fixed;
+      const avail = H - 2 * m - verH - fixed;
       CS = Math.max(20, Math.floor(Math.min((W - 2 * m) / N, avail / N)));
       const bw = CS * N;
       const content = panelH + gap + progH + gap + bw + gap + btnH;
-      const extra = Math.max(0, H - 2 * m - content);
+      const extra = Math.max(0, H - 2 * m - verH - content);
       const titleH = extra >= 50 ? Math.min(52, Math.round(extra * .55)) : 0;
       let y = m + Math.round((extra - titleH) * .4);
       BX = Math.round((W - bw) / 2);
@@ -218,23 +219,31 @@
       wts.forEach(wt => { const w_ = Math.floor(avw * wt / tot); L.btns.push({ x: bx, y, w: w_, h: btnH }); bx += w_ + gap; });
     } else {
       const colMin = 190;
-      CS = Math.max(20, Math.floor(Math.min((H - 2 * m) / N, (W - 2 * m - colMin - m) / N)));
+      CS = Math.max(20, Math.floor(Math.min((H - 2 * m - verH) / N, (W - 2 * m - colMin - m) / N)));
       const bw = CS * N;
-      BX = m; BY = Math.round((H - bw) / 2);
+      BX = m; BY = Math.round((H - verH - bw) / 2);
       const x0 = BX + bw + m * 1.5, colW = Math.max(120, W - x0 - m);
       const ph = Math.round(clamp(H * .15, 46, 66)), pg = Math.round(clamp(H * .02, 5, 10));
       const progH = 16, btnH = Math.round(clamp(H * .11, 34, 46));
       const titleH = H >= 420 ? 40 : 0;
       const stack = (titleH ? titleH + pg : 0) + ph * 2 + pg * 2 + progH + pg + btnH * 3 + pg * 2;
-      let y = Math.max(m, Math.round((H - stack) / 2));
+      let y = Math.max(m, Math.round((H - verH - stack) / 2));
       if (titleH) { L.title = { x: x0, y, w: colW, h: titleH }; y += titleH + pg; }
       L.score = { x: x0, y, w: colW, h: ph }; y += ph + pg;
       L.level = { x: x0, y, w: colW, h: ph }; y += ph + pg;
       L.prog = { x: x0, y, w: colW, h: progH }; y += progH + pg;
       for (let i = 0; i < 3; i++) { L.btns.push({ x: x0, y, w: colW, h: btnH }); y += btnH + pg * (i < 2 ? 1 : 0); }
     }
+    L.ver = { x: Math.round(W / 2) - 60, y: H - verH, w: 120, h: verH };
     GS = Math.max(16, Math.round(CS * .93));
     U = Math.max(.55, CS / 56);
+  }
+
+  function drawVersion() {
+    const v = L.ver;
+    try { ctx.letterSpacing = '1px'; } catch (e) {}
+    txt('v' + VERSION + '  ·  ' + BUILD, v.x + v.w / 2, v.y + v.h / 2 - 1, { size: 11, align: 'center', color: '#6b70c4', weight: '600', shadow: false });
+    try { ctx.letterSpacing = '0px'; } catch (e) {}
   }
 
   let bg = null;
@@ -244,10 +253,10 @@
     const b = bg.getContext('2d');
     b.scale(DPR, DPR);
     const grd = b.createLinearGradient(0, 0, 0, H);
-    grd.addColorStop(0, '#2c1a74'); grd.addColorStop(.45, '#121852'); grd.addColorStop(1, '#050818');
+    grd.addColorStop(0, '#12104a'); grd.addColorStop(.5, '#090934'); grd.addColorStop(1, '#05051f');
     b.fillStyle = grd; b.fillRect(0, 0, W, H);
     const rg = b.createRadialGradient(W / 2, H * .45, 20, W / 2, H * .45, Math.max(W, H) * .75);
-    rg.addColorStop(0, 'rgba(130,95,255,.28)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    rg.addColorStop(0, 'rgba(70,60,255,.22)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
     b.fillStyle = rg; b.fillRect(0, 0, W, H);
     // 위에서 내려오는 빛줄기
     for (let i = 0; i < 7; i++) {
@@ -276,6 +285,35 @@
     b.restore();
   }
 
+  // CRT 오버레이: 스캔라인 + 비네트 (해상도 변경 때만 다시 만든다)
+  let crt = null;
+  function buildCrt() {
+    crt = document.createElement('canvas');
+    crt.width = canvas.width; crt.height = canvas.height;
+    const g = crt.getContext('2d'), w = crt.width, h = crt.height;
+    const period = Math.max(3, Math.round(DPR * 3)), th = Math.max(1, Math.round(period / 2.2));
+    g.fillStyle = 'rgba(0,0,0,.24)';
+    for (let y = 0; y < h; y += period) g.fillRect(0, y, w, th);
+    const rg = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .35, w / 2, h / 2, Math.max(w, h) * .78);
+    rg.addColorStop(0, 'rgba(0,0,0,0)'); rg.addColorStop(1, 'rgba(0,0,0,.5)');
+    g.fillStyle = rg; g.fillRect(0, 0, w, h);
+  }
+  function drawCrt(now) {
+    if (!crt) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(crt, 0, 0);
+    const ch = canvas.height;
+    if (!lowQ) {
+      // 천천히 내려가는 밝은 띠(구형 모니터 느낌)
+      const by = (((now / 6500) % 1.4) - .2) * ch, bh = ch * .22;
+      const lg = ctx.createLinearGradient(0, by, 0, by + bh);
+      lg.addColorStop(0, 'rgba(255,255,255,0)'); lg.addColorStop(.5, 'rgba(255,255,255,.05)'); lg.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = lg; ctx.fillRect(0, by, canvas.width, bh);
+    }
+    ctx.fillStyle = 'rgba(255,255,255,' + (.012 + .012 * Math.sin(now / 37)) + ')';
+    ctx.fillRect(0, 0, canvas.width, ch);
+  }
+
   function applyLayout() {
     const rect = canvas.getBoundingClientRect();
     const w = Math.max(200, Math.floor(rect.width)), h = Math.max(260, Math.floor(rect.height));
@@ -286,6 +324,7 @@
     computeLayout();
     buildSprites();
     buildBg();
+    buildCrt();
     for (let r = 0; r < grid.length; r++) for (let c = 0; c < N; c++) {
       const o = grid[r] && grid[r][c];
       if (o && o.x !== undefined) { o.x = cx(c); o.y = cy(r); o.vy = 0; }
@@ -926,7 +965,8 @@
       ctx.globalAlpha = a; ctx.fillStyle = '#cfd6ff'; star4(ctx, m.x, m.y, m.r * 2.2 * Math.max(.7, U)); ctx.fill();
     }
     ctx.restore();
-    drawHud(now); drawBoard(now); drawMenu(now); drawDialog();
+    drawHud(now); drawBoard(now); drawMenu(now); drawVersion(); drawDialog();
+    drawCrt(now);
   }
 
   function update(dt, now) {
