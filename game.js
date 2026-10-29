@@ -1,5 +1,5 @@
 'use strict';
-/* Jewel Swap — 글로시 보석 매치-3 퍼즐 (독자 디자인)
+/* Jewel Reboot — 글로시 보석 매치-3 퍼즐 (독자 디자인)
  * - 뷰포트 크기를 읽어 레이아웃을 동적으로 계산 (갤럭시 20:9, 컷아웃, 폴더블, 가로 모드)
  * - 모든 보석/이펙트는 캔버스 코드로 직접 그린다.
  */
@@ -29,7 +29,7 @@
 
   // ───────────────────────── 보석 스프라이트 ─────────────────────────
   // 아케이드 블록 퍼즐과 같은 비비드 7색 (시안/레드/그린/옐로/블루/핑크/오렌지)
-  const VERSION = '1.4.0', BUILD = '2026-10-29';   // 배포할 때 sw.js 의 VERSION(캐시 이름)도 같이 올리세요
+  const VERSION = '1.4.1', BUILD = '2026-10-29';   // 배포할 때 sw.js 의 VERSION(캐시 이름)도 같이 올리세요
   const BASE = ['#19d3f3', '#ff3b30', '#30d158', '#ffd60a', '#3d5afe', '#ff2d95', '#ff9f0a'];
   const mixHex = (a, b, t) => {
     const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
@@ -753,8 +753,8 @@
     const t = L.title;
     const size = Math.round(Math.min(t.h * .8, t.w * .11));
     const y = t.y + t.h / 2;
-    txt('JEWEL SWAP', t.x + t.w / 2, y, { size, align: 'center', color: gold(y, size), stroke: { w: size * .14, c: '#3a1a00' } });
-    const tw = ctx.measureText('JEWEL SWAP').width;
+    txt('JEWEL REBOOT', t.x + t.w / 2, y, { size, align: 'center', color: gold(y, size), stroke: { w: size * .14, c: '#3a1a00' } });
+    const tw = ctx.measureText('JEWEL REBOOT').width;
     const p = (now / 1900) % 2;
     if (p < 1) {
       const gx = t.x + t.w / 2 - tw / 2 + p * tw, gr = size * .55 * Math.sin(Math.PI * p);
