@@ -4,7 +4,7 @@
  */
 (() => {
   const N = 8, NT = 6, HYPER = 6;
-  const VERSION = '2.6.0', BUILD = '2026-10-29';   // 배포 시 sw.js 의 VERSION(캐시 이름)도 같이 올리세요
+  const VERSION = '2.6.2', BUILD = '2026-10-29';   // 배포 시 sw.js 의 VERSION(캐시 이름)도 같이 올리세요
   const IDLE_HINT_SEC = 9;
 
   const canvas = document.getElementById('c');
@@ -26,7 +26,7 @@
   const SAVE_KEY = 'jewel-reboot-save-v2';
   const defStats = () => ({ gems: 0, plays: 0, flame: 0, star: 0, hyper: 0, nova: 0, zenSec: 0, bf: 0, quest: 0, maxCombo: 0 });
   let save = (() => {
-    const d = { best: {}, badges: {}, unlocked: {}, stats: defStats(), sound: true, coins: 300, boosters: { wand: 3, bomb: 3, burst: 5 }, crt: 1 };
+    const d = { best: {}, badges: {}, unlocked: {}, stats: defStats(), sound: true, coins: 300, boosters: { wand: 3, bomb: 3, burst: 5 }, crt: 1, vib: true };
     try {
       const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
       if (s && typeof s === 'object') { Object.assign(d, s); d.stats = Object.assign(defStats(), s.stats || {}); }
@@ -676,7 +676,7 @@
   function doPunch(v) { punch = Math.max(punch, v); }
   function showPraise(text, size, col) { praise = { text, size: (size || 54) * Math.max(.7, U), t0: performance.now(), dur: 1300, col }; }
   function addPopup(t, x, y, big) { popups.push({ txt: t, x, y, life: 1, t0: performance.now(), big: !!big }); }
-  function buzz(p) { if (!sound) return; try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+  function buzz(p) { if (save.vib === false) return; try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
   function toast(kind, title, sub) { toasts.push({ kind, title, sub, t0: 0, dur: 2800 }); }
   function clearFx() {
     parts.length = rings.length = bolts.length = beams.length = flashes.length = popups.length = conf.length = glints.length = 0;
@@ -1391,6 +1391,7 @@
     const btns = [];
     if (inGame) btns.push({ label: 'Resume', fn: () => { dlg = null; }, hue: HUE_GREEN });
     btns.push({ label: 'Sound: ' + (sound ? 'On' : 'Off'), fn: () => { toggleSound(); dlg = settingsDlg(title, inGame); }, hue: HUE_BLUE });
+    btns.push({ label: 'Vibration: ' + (save.vib === false ? 'Off' : 'On'), fn: () => { save.vib = save.vib === false; dirty = true; buzz(30); dlg = settingsDlg(title, inGame); }, hue: HUE_BLUE });
     btns.push({ label: 'Scanlines: ' + (save.crt ? 'On' : 'Off'), fn: () => { setCrt(save.crt ? 0 : 1); dlg = settingsDlg(title, inGame); }, hue: HUE_BLUE });
     if (inGame) btns.push({ label: 'Quit', fn: () => { toMenu(); }, hue: HUE_RED }); else btns.push({ label: 'Close', fn: () => { dlg = null; }, hue: HUE_GREEN });
     return { title, lines: [], btns, stack: true };
@@ -2775,15 +2776,33 @@
   };
   canvas.addEventListener('pointerup', endPress);
   canvas.addEventListener('pointercancel', () => { down = null; pressBtn = null; });
-  // 뒤로 가기 키 / ESC
-  window.addEventListener('keydown', e => {
-    if (e.key !== 'Escape') return;
+  // 뒤로 가기 (안드로이드 뒤로가기 버튼 / ESC)
+  function exitDlg() {
+    return { title: 'Exit', lines: ['게임을 종료할까요?', '진행 중인 판은 저장됩니다.'],
+      btns: [{ label: 'Exit', fn: exitApp, hue: HUE_RED }, { label: 'Stay', fn: () => { dlg = null; }, hue: HUE_GREEN }] };
+  }
+  function backAction() {
+    unlockAudio();
     if (armed) armed = null;
-    else if (dlg) dlg = null;
+    else if (dlg) { if (G && G.over) toMenu(); else dlg = null; }
     else if (screen === 'game') openPause();
     else if (screen !== 'menu') screen = 'menu';
     else if (menuPage === 'more') menuPage = 'main';
-  });
+    else dlg = exitDlg();
+  }
+  // 웹앱은 스스로 종료할 수 없어서 기록을 거슬러 올라가 빠져나간다 (실패하면 안내만 하고 그대로 둔다)
+  let trapOn = false;
+  function armTrap() { try { history.pushState({ jr: 1 }, ''); trapOn = true; } catch (e) { trapOn = false; } }
+  function onPop() { armTrap(); backAction(); }
+  function exitApp() {
+    persist(); saveRun();
+    window.removeEventListener('popstate', onPop);
+    try { window.close(); } catch (e) {}
+    try { history.go(-1); setTimeout(() => { try { history.back(); } catch (e) {} }, 60); } catch (e) {}
+    setTimeout(() => { dlg = null; window.addEventListener('popstate', onPop); armTrap(); toast('lock', '앱을 닫지 못했어요', '홈 버튼으로 나가 주세요'); }, 700);
+  }
+  try { history.replaceState({ jr: 0 }, ''); armTrap(); window.addEventListener('popstate', onPop); } catch (e) {}
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') backAction(); });
 
   // ───────────────────────── 메인 루프 ─────────────────────────
   let last = performance.now(), emaDt = 1, slowFrames = 0, lastSave = 0;
@@ -2814,7 +2833,7 @@
   // ───────────────────────── 테스트용 API ─────────────────────────
   window.__jewel = {
     VERSION,
-    findMove, trySwap, twistRotate, newGame, useBooster, applyBooster, openPause, saveRun, restoreRun, get armed() { return armed; }, relayout: applyLayout, toMenu,
+    findMove, trySwap, twistRotate, newGame, useBooster, applyBooster, openPause, saveRun, restoreRun, backAction, get armed() { return armed; }, relayout: applyLayout, toMenu,
     get G() { return G; }, get screen() { return screen; }, get dlg() { return dlg; },
     get busy() { return !!(G && G.busy); }, get score() { return G ? G.score : 0; },
     get level() { return G ? G.level : 0; }, get over() { return !!(G && G.over); },
